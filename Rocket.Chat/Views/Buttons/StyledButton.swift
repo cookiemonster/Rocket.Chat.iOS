@@ -1,0 +1,157 @@
+//
+//  StyledButton.swift
+//  Rocket.Chat
+//
+//  Created by Filipe Alvarenga on 01/06/18.
+//  Copyright © 2018 Rocket.Chat. All rights reserved.
+//
+
+import UIKit
+
+final class StyledButton: UIButton {
+
+    // MARK: - Nested Types
+
+    enum Style: Int {
+        case solid = 0, outline
+    }
+
+    // MARK: - Properties
+
+    var style = Style.solid
+    var fontWeight = UIFont.Weight.regular
+    @IBInspectable var fontWeightDescription: String = "Regular" {
+        didSet {
+            switch fontWeightDescription {
+            case "Regular":
+                fontWeight = UIFont.Weight.regular
+            case "Light":
+                fontWeight = UIFont.Weight.light
+            case "Medium":
+                fontWeight = UIFont.Weight.medium
+            case "Bold":
+                fontWeight = UIFont.Weight.bold
+            default:
+                fontWeight = UIFont.Weight.regular
+            }
+        }
+    }
+    @IBInspectable var cornerRadius: CGFloat = 2
+    @IBInspectable var borderWidth: CGFloat = 1
+    @IBInspectable var buttonColorDisabled: UIColor = UIColor(red: 225/255, green: 229/255, blue: 232/255, alpha: 1)
+    @IBInspectable var buttonColor: UIColor = UIColor.RCSkyBlue()
+    @IBInspectable var borderColor: UIColor = UIColor.RCSkyBlue()
+    @IBInspectable var textColor: UIColor = UIColor.white
+    @IBInspectable var fontSize: CGFloat = 16.0
+    @IBInspectable var styleRaw: Int = 0 {
+        didSet {
+            guard let style = Style(rawValue: styleRaw) else {
+                return assertionFailure("Value inputed on IB doesn't match any valid option")
+            }
+
+            self.style = style
+        }
+    }
+
+    lazy var loadingIndicator: UIActivityIndicatorView = {
+        let activity = UIActivityIndicatorView(style: .gray)
+        return activity
+    }()
+
+    var isLoading = false
+    var titleBeforeLoading: String?
+
+    // MARK: - Life Cycle
+
+    override func awakeFromNib() {
+        super.awakeFromNib()
+
+        applyStyle()
+    }
+
+    override func imageRect(forContentRect contentRect: CGRect) -> CGRect {
+        var imageRect = contentRect
+        imageRect.origin = CGPoint(x: 15, y: 11)
+        imageRect.size = CGSize(width: 24, height: 24)
+        return imageRect
+    }
+
+    // MARK: Style Modifiers
+
+    func applyStyle() {
+        layer.cornerRadius = cornerRadius
+        clipsToBounds = true
+
+        if !isEnabled {
+            backgroundColor = buttonColorDisabled
+            layer.borderColor = UIColor.clear.cgColor
+            layer.borderWidth = 0
+            setTitleColor(.white, for: UIControl.State())
+            setTitleShadowColor(nil, for: UIControl.State())
+            return
+        }
+
+        switch style {
+        case .solid:
+            backgroundColor = buttonColor
+            layer.borderColor = borderColor.cgColor
+            layer.borderWidth = borderWidth
+            setTitleColor(textColor, for: UIControl.State())
+            setTitleShadowColor(nil, for: UIControl.State())
+            titleLabel?.font = UIFont.systemFont(ofSize: fontSize, weight: fontWeight)
+        case .outline:
+            backgroundColor = UIColor.clear
+            layer.borderColor = borderColor.cgColor
+            layer.borderWidth = borderWidth
+            setTitleColor(textColor, for: UIControl.State())
+            titleLabel?.font = UIFont.systemFont(ofSize: fontSize, weight: fontWeight)
+        }
+    }
+
+    override var isEnabled: Bool {
+        didSet {
+            applyStyle()
+        }
+    }
+
+    // MARK: - Loading
+
+    func startLoading() {
+        isLoading = true
+        titleBeforeLoading = title(for: UIControl.State())
+        setTitle(nil, for: UIControl.State())
+
+        switch style {
+        case .solid:
+            if buttonColor.isBrightColor() {
+                loadingIndicator.style = .gray
+            } else {
+                loadingIndicator.style = .white
+            }
+        case .outline:
+            loadingIndicator.color = borderColor
+            loadingIndicator.tintColor = borderColor
+        }
+
+        setNeedsLayout()
+        layoutIfNeeded()
+        let width = frame.width
+        loadingIndicator.frame = CGRect(
+            x: (width / 2 - loadingIndicator.frame.width / 2),
+            y: (frame.height / 2 - loadingIndicator.frame.height / 2),
+            width: loadingIndicator.frame.width,
+            height: loadingIndicator.frame.height
+        )
+
+        addSubview(loadingIndicator)
+        loadingIndicator.startAnimating()
+    }
+
+    func stopLoading() {
+        isLoading = false
+        loadingIndicator.stopAnimating()
+        loadingIndicator.removeFromSuperview()
+        setTitle(titleBeforeLoading, for: UIControl.State())
+    }
+
+}
